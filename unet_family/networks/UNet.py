@@ -1,8 +1,8 @@
-import _init_paths
 import torch
 import torch.nn as nn
-from layers import unetConv2, unetUp
-from utils import init_weights, count_param
+from unet_family.layers import UnetConv2, UnetUp
+from unet_family.utils import init_weights, count_param
+
 
 class UNet(nn.Module):
 
@@ -12,23 +12,22 @@ class UNet(nn.Module):
         self.feature_scale = feature_scale
         self.is_deconv = is_deconv
         self.is_batchnorm = is_batchnorm
-        
 
         filters = [64, 128, 256, 512, 1024]
         filters = [int(x / self.feature_scale) for x in filters]
 
         # downsampling
         self.maxpool = nn.MaxPool2d(kernel_size=2)
-        self.conv1 = unetConv2(self.in_channels, filters[0], self.is_batchnorm)
-        self.conv2 = unetConv2(filters[0], filters[1], self.is_batchnorm)
-        self.conv3 = unetConv2(filters[1], filters[2], self.is_batchnorm)
-        self.conv4 = unetConv2(filters[2], filters[3], self.is_batchnorm)
-        self.center = unetConv2(filters[3], filters[4], self.is_batchnorm)
+        self.conv1 = UnetConv2(self.in_channels, filters[0], self.is_batchnorm)
+        self.conv2 = UnetConv2(filters[0], filters[1], self.is_batchnorm)
+        self.conv3 = UnetConv2(filters[1], filters[2], self.is_batchnorm)
+        self.conv4 = UnetConv2(filters[2], filters[3], self.is_batchnorm)
+        self.center = UnetConv2(filters[3], filters[4], self.is_batchnorm)
         # upsampling
-        self.up_concat4 = unetUp(filters[4], filters[3], self.is_deconv)
-        self.up_concat3 = unetUp(filters[3], filters[2], self.is_deconv)
-        self.up_concat2 = unetUp(filters[2], filters[1], self.is_deconv)
-        self.up_concat1 = unetUp(filters[1], filters[0], self.is_deconv)
+        self.up_concat4 = UnetUp(filters[4], filters[3], self.is_deconv)
+        self.up_concat3 = UnetUp(filters[3], filters[2], self.is_deconv)
+        self.up_concat2 = UnetUp(filters[2], filters[1], self.is_deconv)
+        self.up_concat1 = UnetUp(filters[1], filters[0], self.is_deconv)
         # final conv (without any concat)
         self.final = nn.Conv2d(filters[0], n_classes, 1)
 
@@ -62,6 +61,7 @@ class UNet(nn.Module):
 
         return final
 
+
 if __name__ == '__main__':
     print('#### Test Case ###')
     from torch.autograd import Variable
@@ -72,5 +72,3 @@ if __name__ == '__main__':
     print('Output shape:',y.shape)
     print('UNet totoal parameters: %.2fM (%d)'%(param/1e6,param))
 
-
-      

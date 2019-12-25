@@ -1,10 +1,11 @@
 import torch
 import torch.nn as nn
-from utils import init_weights
+from unet_family.utils import init_weights
 
-class unetConv2(nn.Module):
+
+class UnetConv2(nn.Module):
     def __init__(self, in_size, out_size, is_batchnorm, n=2, ks=3, stride=1, padding=1):
-        super(unetConv2, self).__init__()
+        super(UnetConv2, self).__init__()
         self.n = n
         self.ks = ks
         self.stride = stride
@@ -38,10 +39,13 @@ class unetConv2(nn.Module):
 
         return x
 
-class unetUp(nn.Module):
+
+class UnetUp(nn.Module):
     def __init__(self, in_size, out_size, is_deconv, n_concat=2):
-        super(unetUp, self).__init__()
-        self.conv = unetConv2(in_size+(n_concat-2)*out_size, out_size, False)
+        super(UnetUp, self).__init__()
+        # self.conv = UnetConv2(in_size + (n_concat - 2) * out_size, out_size, False)
+
+        self.conv = UnetConv2(2*out_size + (n_concat - 2) * out_size, out_size, False)
         if is_deconv:
             self.up = nn.ConvTranspose2d(in_size, out_size, kernel_size=2, stride=2, padding=0)
         else:
@@ -49,6 +53,29 @@ class unetUp(nn.Module):
                  nn.UpsamplingBilinear2d(scale_factor=2),
                  nn.Conv2d(in_size, out_size, 1))
            
+        # initialise the blocks
+        for m in self.children():
+            if m.__class__.__name__.find('unetConv2') != -1: continue
+            init_weights(m, init_type='kaiming')
+
+    def forward(self, high_feature, *low_feature):
+        outputs0 = self.up(high_feature)
+        for feature in low_feature:
+            outputs0 = torch.cat([outputs0, feature], 1)
+        return self.conv(outputs0)
+
+
+class DoubleUnetUp(nn.Module):
+    def __init__(self, in_size, out_size, is_deconv, n_concat=2):
+        super().__init__()
+        self.conv = UnetConv2(in_size + (n_concat - 2) * out_size, out_size, False)
+        if is_deconv:
+            self.up = nn.ConvTranspose2d(in_size, out_size, kernel_size=2, stride=2, padding=0)
+        else:
+            self.up = nn.Sequential(
+                nn.UpsamplingBilinear2d(scale_factor=2),
+                nn.Conv2d(in_size, out_size, 1))
+
         # initialise the blocks
         for m in self.children():
             if m.__class__.__name__.find('unetConv2') != -1: continue
