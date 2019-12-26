@@ -70,8 +70,8 @@ class UnetUpTwoEnc(nn.Module):
         super().__init__()
         # self.conv = UnetConv2(in_size + (n_concat - 2) * out_size, out_size, False)
 
-        self.conv = UnetConv2((n_diag + 2) * out_size, out_size, False)
-
+        self.conv = UnetConv2((n_diag + 2) * out_size, out_size*2, True)
+        self.conv2 = UnetConv2(out_size*2, out_size, True)
         if n_diag is 1:
             in_size *= 2
         if is_deconv:
@@ -90,7 +90,7 @@ class UnetUpTwoEnc(nn.Module):
         outputs0 = self.up(high_feature)
         for feature in low_feature:
             outputs0 = torch.cat([outputs0, feature], 1)
-        return self.conv(outputs0)
+        return self.conv2(self.conv(outputs0))
 
 
 class DoubleUnetUp(nn.Module):
